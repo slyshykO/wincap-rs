@@ -1,13 +1,9 @@
 use std::time::Duration;
 use thiserror::Error;
 
-/// Errors for the opt-in capture API. The legacy WindowsCaptureError is unchanged.
+/// Errors for HWND capture. Title lookup uses error::WindowsCaptureError.
 #[derive(Error, Debug)]
 pub enum CaptureError {
-    #[error("No window has the requested title")]
-    WindowNotFound,
-    #[error("The title matches {0} windows; select a specific HWND")]
-    AmbiguousWindowTitle(usize),
     #[error("Invalid capture argument: {0}")]
     InvalidInput(&'static str),
     #[error("Capture target is no longer available")]

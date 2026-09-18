@@ -1,10 +1,10 @@
 //! Opt-in capture with frame context, validation, and a bounded frame wait.
-//! The original window/monitor screenshot APIs keep their existing behavior.
+//! Use window::window_handle for shared exact Unicode title selection.
 
 mod error;
 mod window;
 pub use error::{CaptureError, Result};
-pub use window::{capture_hwnd, find_window_exact};
+pub use window::capture_hwnd;
 
 use crate::{devices, WindowRect};
 use image::{DynamicImage, RgbaImage};

@@ -35,13 +35,15 @@ metadata format. Callers needing those must measure and validate them around
 capture. It rejects item/content size changes, content outside the texture,
 invalid crops, unsupported texture layouts, and invalid row strides.
 
-For manual selection, `capture::find_window_exact(title)` matches an exact
+For manual selection, `window::window_handle(title)` matches an exact
 Unicode top-level title, including whitespace. No match and duplicate matches
 are distinct errors. Resolve once and pass the returned HWND to `capture_hwnd`.
+This is the single title-lookup API, also used by `window::window_sc`.
+Title lookup does not initialize WinRT; the capture functions initialize it.
 
 ## Errors and lifetime
 
-These new functions return `capture::Result<T>` using the separate
+`capture_hwnd` returns `capture::Result<T>` using the separate
 `capture::CaptureError` enum. Native failures, invalid/minimized targets, frame
 timeout, target closure, and invalid frame data are returned to the caller.
 
@@ -56,14 +58,17 @@ STA UI callers can use a worker thread. This API does not change DPI awareness.
 
 ## Existing API compatibility
 
-The original `window::window_handle`, `window::get_window_rect`,
-`window::window_sc`, and `monitor::monitor_sc` implementations are retained.
-In particular, `get_window_rect` still returns `RECT`, and the original title
-lookup, error formatting, initialization, image saving, and capture paths retain
-their behavior. They are not routed through the stricter new capture API.
-`error::WindowsCaptureError` keeps its original variants, so existing exhaustive
-matches remain valid. Applications opt into the new behavior by calling the
-new `capture` module.
+`window::window_handle` retains its `error::Result<HWND>` return type and now
+uses the exact Unicode implementation. Ambiguous titles are errors rather than
+selecting an arbitrary window; empty, NUL-containing, and overlong titles are
+rejected. `error::WindowsCaptureError` adds `AmbiguousWindowTitle` and
+`InvalidWindowTitle`, so exhaustive matches must account for these variants.
+The existing error variants and their formatting remain unchanged.
+
+`window::get_window_rect` still returns `RECT`. `window::window_sc` uses the
+shared title lookup and initializes WinRT itself. Its image-saving and capture
+path, and `monitor::monitor_sc`, are otherwise unchanged. Frame context and
+bounded waiting remain opt-in through `capture_hwnd`.
 
 ## Tests
 
@@ -77,5 +82,5 @@ Synthetic tests cover crop/texture validation, row padding and channel order,
 arithmetic limits, timeouts, and callback errors. Compatibility tests check the
 original function signatures and exhaustive error matching. Native tests own
 nonactivating windows and check repeated capture, dimensions/timing, recovery
-after an invalid crop, and legacy title lookup/window capture. They send no
+after an invalid crop, and shared Unicode title lookup/window capture. They send no
 global input.

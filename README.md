@@ -70,6 +70,6 @@ fn capture_window(hwnd: windows::Win32::Foundation::HWND)
 ```
 
 This API returns pixels together with frame sizes, crop, and timing, and bounds
-the frame wait. `capture::find_window_exact` provides optional exact Unicode
-title selection with duplicate detection. Existing window/monitor functions and
-their behavior are unchanged. See [HWND capture details](docs/hwnd-capture.md).
+the frame wait. `window::window_handle` now uses exact Unicode title matching
+and rejects duplicate matches. Window and monitor capture keep their existing
+signatures and image-saving behavior. See [HWND capture details](docs/hwnd-capture.md).

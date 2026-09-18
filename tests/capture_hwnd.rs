@@ -118,24 +118,40 @@ fn repeated_frames_preserve_context_and_capture_recovers_after_invalid_crop() {
 
 #[test]
 #[ignore = "requires an interactive Windows desktop and Windows Graphics Capture"]
-fn legacy_title_lookup_and_window_capture_keep_their_behavior() {
+fn shared_unicode_lookup_and_window_capture_reject_ambiguous_titles() {
     let first = OwnedWindow::new();
     let second = OwnedWindow::new();
-    let title = format!("wincap legacy test {}", std::process::id());
+    let title = format!("wincap title test {} Місто 城 🦀  ", std::process::id());
     let wide: Vec<_> = title.encode_utf16().chain(Some(0)).collect();
+    let longer: Vec<_> = (title.clone() + "longer")
+        .encode_utf16()
+        .chain(Some(0))
+        .collect();
     unsafe {
         SetWindowTextW(first.hwnd(), PCWSTR(wide.as_ptr())).unwrap();
-        SetWindowTextW(second.hwnd(), PCWSTR(wide.as_ptr())).unwrap();
+        SetWindowTextW(second.hwnd(), PCWSTR(longer.as_ptr())).unwrap();
     }
-    // Legacy lookup accepts duplicate titles; strict Unicode lookup is opt-in.
-    let hwnd = window::window_handle(&title).unwrap();
-    assert!(hwnd == first.hwnd() || hwnd == second.hwnd());
+    // Exact UTF-16 matching preserves trailing spaces and rejects prefixes.
     assert!(matches!(
-        capture::find_window_exact(&title),
-        Err(capture::CaptureError::AmbiguousWindowTitle(2))
+        window::window_handle(title.trim_end()),
+        Err(wincap::error::WindowsCaptureError::WindowNotFoundErr)
     ));
+    let hwnd = window::window_handle(&title).unwrap();
+    assert_eq!(hwnd, first.hwnd());
     let rect: windows::Win32::Foundation::RECT = window::get_window_rect(hwnd);
     let image = window::window_sc(&title, None, &ImageMode::NoSave).unwrap();
     assert_eq!(image.width(), (rect.right - rect.left) as u32);
     assert_eq!(image.height(), (rect.bottom - rect.top) as u32);
+
+    unsafe {
+        SetWindowTextW(second.hwnd(), PCWSTR(wide.as_ptr())).unwrap();
+    }
+    assert!(matches!(
+        window::window_handle(&title),
+        Err(wincap::error::WindowsCaptureError::AmbiguousWindowTitle(2))
+    ));
+    assert!(matches!(
+        window::window_sc(&title, None, &ImageMode::NoSave),
+        Err(wincap::error::WindowsCaptureError::AmbiguousWindowTitle(2))
+    ));
 }
